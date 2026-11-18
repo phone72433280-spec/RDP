@@ -1,0 +1,79 @@
+# 🚀 Configuración completa de Windows RDP
+
+### 📁 Ruta del archivo en el repositorio de GitHub:
+`.github/workflows/windows_rdp.yml`
+
+---
+
+### 💻 Código para pegar dentro de `.github/workflows/windows_rdp.yml`:
+
+```yaml
+Nombre: 🚀 RDP de Windows de alta velocidad (máquina virtual oficial de Azure a través de Tailscale)
+
+en:
+  workflow_dispatch:
+    entradas:
+      tailscale_key:
+        Descripción: 'Introduzca su clave de autenticación de Tailscale (tskey-auth-...)'
+        requerido: verdadero
+        default: ''
+
+trabajos:
+  build:
+    Se ejecuta en: windows-latest
+    tiempo de espera: 360 minutos
+
+    pasos:
+    - nombre: ⚙️ Habilitar Escritorio remoto de Windows (RDP) y configurar usuario
+      ejecutar: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Escritorio remoto"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 0
+        net user runneradmin "¡Contraseña123!"
+        net localgroup "Usuarios de Escritorio remoto" runneradmin /add >$null 2>&1
+
+    - nombre: ⬇️ Instalar y conectar Tailscale
+      ejecutar: |
+        Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe" -OutFile "tailscale-setup.exe"
+        Start-Process -FilePath "tailscale-setup.exe" -ArgumentList "/quiet" -Wait
+        $tailscaleExe = "C:\Archivos de programa\Tailscale\tailscale.exe"
+        & $tailscaleExe up --authkey="${{ github.event.inputs.tailscale_key }}" --accept-routes
+        Start-Sleep -Seconds 3
+        $ip = (& $tailscaleExe ip -4)
+        
+        Write-Host ""
+        Write-Host "==================================================================" -ForegroundColor Cyan
+        Write-Host "🎉 SERVIDOR OFICIAL DE WINDOWS AAPKA RDP BILKUL LISTO HAI!" -Color de primer plano Verde
+        Write-Host "==================================================================" -ForegroundColor Cyan
+        Write-Host "🖥️ Dirección IP RDP: $ip" -ForegroundColor Yellow
+        Write-Host "👤 Nombre de usuario: runneradmin" -ForegroundColor White
+        Write-Host "🔑 Contraseña: Password123!" -ForegroundColor Blanco
+        Write-Host "⚡ Velocidad: 1 Gbps+ Red WireGuard directa punto a punto" -ForegroundColor Green
+        Write-Host "⏱️ Duración: 6 horas (límite máximo)" -ForegroundColor Magenta
+        Write-Host "==================================================================" -ForegroundColor Cyan
+        Write-Host ""
+
+    - nombre: ⏳ Corredor de mantenimiento de vida (hasta 6 horas de actividad)
+      ejecutar: |
+        $totalMinutes = 350
+        para ($i = 1; $i -le $totalMinutes; $i++) {
+            Inicio-Sueño -Segundos 60
+            si ($i % 10 -eq 0) {
+                Write-Host "🟢 RDP de Windows activo: $i / $totalMinutes minutos"
+            }
+        }
+```
+
+---
+
+### 🔑 Credenciales predeterminadas:
+* **Nombre de usuario:** `runneradmin`
+* **Contraseña:** `Password123!`
+* **Dirección IP:** GitHub realiza el paso `Instalar y conectar Tailscale` para andar dikhta hai (por ejemplo, `100.xxx`).
+
+---
+
+### 🔗 Enlaces útiles directos:
+1. **Pestaña de Acciones de GitHub:** https://github.com/workindiammm-lgtm/rdp-/actions
+2. **Página de claves de Tailscale:** https://login.tailscale.com/admin/settings/keys
+3. **Máquinas de Tailscale:** https://login.tailscale.com/admin/machines
