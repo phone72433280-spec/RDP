@@ -1,0 +1,53 @@
+name: 🚀 High-Speed Windows RDP (Tailscale)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tailscale_key:
+        description: 'Introduce tu clave de autenticación de Tailscale (tskey-auth-...)'
+        required: true
+        default: ''
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: ⚙️ Habilitar Escritorio remoto de Windows (RDP) y configurar usuario
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
+          net user runneradmin "Password123!"
+          net localgroup "Remote Desktop Users" runneradmin /add >$null 2>&1
+
+      - name: ⬇️ Instalar y conectar Tailscale
+        run: |
+          Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe" -OutFile "tailscale-setup.exe"
+          Start-Process -FilePath "tailscale-setup.exe" -ArgumentList "/quiet" -Wait
+          $tailscaleExe = "C:\Program Files\Tailscale\tailscale.exe"
+          & $tailscaleExe up --authkey="${{ github.event.inputs.tailscale_key }}" --accept-routes
+          Start-Sleep -Seconds 3
+          $ip = (& $tailscaleExe ip -4)
+          Write-Host ""
+          Write-Host "==================================================================" -ForegroundColor Cyan
+          Write-Host "🎉 SERVIDOR RDP DE WINDOWS LISTO" -ForegroundColor Green
+          Write-Host "==================================================================" -ForegroundColor Cyan
+          Write-Host "🖥️ Dirección IP RDP: $ip" -ForegroundColor Yellow
+          Write-Host "👤 Nombre de usuario: runneradmin" -ForegroundColor White
+          Write-Host "🔑 Contraseña: Password123!" -ForegroundColor White
+          Write-Host "⚡ Velocidad: 1 Gbps+ Red WireGuard directa punto a punto" -ForegroundColor Green
+          Write-Host "⏱️ Duración: 6 horas (límite máximo)" -ForegroundColor Magenta
+          Write-Host "==================================================================" -ForegroundColor Cyan
+          Write-Host ""
+
+      - name: ⏳ Mantener sesión activa (hasta 6 horas)
+        run: |
+          $totalMinutes = 350
+          for ($i = 1; $i -le $totalMinutes; $i++) {
+            Start-Sleep -Seconds 60
+            if ($i % 10 -eq 0) {
+              Write-Host "🟢 RDP de Windows activo: $i / $totalMinutes minutos"
+            }
+          }
